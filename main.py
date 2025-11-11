@@ -1,5 +1,16 @@
+import os
+import re
 import time
 from playwright.sync_api import sync_playwright, Page
+
+def sanitize_dirname(name: str) -> str:
+    # Remove invalid filesystem characters: / \ : * ? " < > | 
+    sanitized = re.sub(r'[\/\\:\*\?"<>\|]', '', name)
+    # Strip leading/trailing spaces and dots
+    sanitized = sanitized.strip(' .')
+    # Replace multiple spaces with single underscore
+    sanitized = re.sub(r'\s+', '_', sanitized)
+    return sanitized or "untitled"
 
 def get_largest_img(images):
     largest_img = {
@@ -15,7 +26,7 @@ def get_largest_img(images):
 
     return largest_img["element"]
 
-def download_page(page: Page, last_visited):
+def download_page(page: Page, last_visited, folder):
     last_visited["page-number"] += 1
     page_number = last_visited["page-number"]
 
@@ -32,7 +43,7 @@ def download_page(page: Page, last_visited):
         print(f"No valid image found on page {page_number}.")
     else:
         image_data = page.request.get(src).body()
-        with open(f"pages/page_{page_number:03}.jpg", "wb") as f:
+        with open(f"{folder}/page_{page_number:03}.jpg", "wb") as f:
             f.write(image_data)
 
     last_visited["url"] = page.url
@@ -52,6 +63,9 @@ def main():
         page.wait_for_load_state("networkidle")
         time.sleep(1)
 
+        folder = sanitize_dirname(page.title())
+        os.makedirs(folder, exist_ok=True)
+
         last_visited = {
             "url": None,
             "title": None,
@@ -60,7 +74,7 @@ def main():
         }
 
         while True:
-            done = download_page(page, last_visited)
+            done = download_page(page, last_visited, folder)
             if done:
                 break
 
