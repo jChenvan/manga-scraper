@@ -42,11 +42,15 @@ def download_page(page: Page, last_visited):
     return False
 
 def main():
+    first_page_url = input(">> Url of first page: ").strip()
+
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False)
         page = browser.new_page()
 
-        input("Browser launched. Navigate to the first page of the chapter, then return to this terminal and press Enter to continue...")
+        page.goto(first_page_url)
+        page.wait_for_load_state("networkidle")
+        time.sleep(1)
 
         last_visited = {
             "url": None,
